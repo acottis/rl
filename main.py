@@ -1,46 +1,50 @@
-from agents import Q, ActionEnum, Sarsa
+from agents import Q, QNet, Sarsa
 import numpy as np
 
+from game import MoveRight
 
-class Game:
-    class Action(ActionEnum):
-        LEFT = 0
-        RIGHT = 1
 
-    state: int = 0
-    done: bool = False
-    reward: float = 1.0
-    goal: int
+def qnet() -> list[float] | None:
+    game = MoveRight(4)
+    episodes = 25
+    alpha = 0.05
+    gamma = 0.99
+    epsilon = 1.0
+    epsilon_final = 0.01
+    epsilon_decay = (epsilon - epsilon_final) / episodes
+    agent = QNet(
+        game,
+        epsilon,
+        epsilon_decay,
+        gamma,
+        alpha,
+    )
+    # Training loop
+    for ep in range(episodes):
+        state = game.reset()
+        loss = 0
+        while not game.done:
+            action = agent.action(state)
+            next_state, reward = game.step(action)
+            loss += agent.update(game.done, state, action, reward, next_state)
+            state = next_state
 
-    def __init__(self, goal: int):
-        self.goal = goal
+        agent.decay_epsilon()
 
-    def reset(self) -> int:
-        self.state = 0
-        self.done = False
-        return self.state
-
-    def step(self, action: Action) -> tuple[int, float]:
-        if action == 0:
-            self.state = max(0, self.state - 1)
-        else:
-            self.state = min(4, self.state + 1)
-
-        self.done = self.state == self.goal
-        reward = self.reward if self.done else -0.2
-        return self.state, reward
+        print(f"\nEpisode {ep + 1}: loss {loss}")
+    return agent.training_loss
 
 
 def qlearn() -> list[float]:
-    game = Game(4)
+    game = MoveRight(4)
     episodes = 100
     alpha = 0.1
     gamma = 0.99
     epsilon = 1.0
     epsilon_final = 0.01
     epsilon_decay = (epsilon - epsilon_final) / episodes
-    agent = Q[int, Game.Action](
-        Game.Action,
+    agent = Q(
+        game,
         epsilon,
         epsilon_decay,
         gamma,
@@ -52,7 +56,7 @@ def qlearn() -> list[float]:
         while not game.done:
             action = agent.action(state)
             next_state, reward = game.step(action)
-            agent.update(state, action, reward, next_state)
+            agent.update(game.done, state, action, reward, next_state)
             state = next_state
 
         agent.decay_epsilon()
@@ -64,17 +68,17 @@ def qlearn() -> list[float]:
 
 
 def sarsa() -> list[float]:
-    game = Game(4)
+    game = MoveRight(4)
 
-    episodes = 2000
+    episodes = 200
     alpha = 0.1
     gamma = 0.99
     epsilon = 1.0
     epsilon_final = 0.01
     epsilon_decay = (epsilon - epsilon_final) / episodes
 
-    agent = Sarsa[int, Game.Action](
-        Game.Action,
+    agent = Sarsa(
+        game,
         epsilon,
         epsilon_decay,
         gamma,
@@ -101,8 +105,8 @@ def sarsa() -> list[float]:
 
 
 def main():
-    loss = sarsa()
-    plot(loss)
+    if loss := qnet():
+        plot(loss)
 
 
 def plot(training_loss: list[float]):
