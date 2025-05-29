@@ -3,6 +3,8 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+from torch.nn.modules.loss import _Loss
+from torch.optim import Optimizer
 
 from game import Action, Game, State
 
@@ -142,7 +144,8 @@ class QNet(Generic[State, Action]):
     alpha: float
     training_loss: list[float] = []
 
-    loss_fn: nn.MSELoss
+    loss_fn: _Loss
+    optimizer: Optimizer
 
     def __init__(
         self,
