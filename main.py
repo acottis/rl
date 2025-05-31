@@ -4,6 +4,40 @@ import numpy as np
 from game import GridWorld, MoveRight
 
 
+def qlearn_grid() -> list[float] | None:
+    # game = MoveRight(4)
+    game = GridWorld()
+    episodes = 1000
+    alpha = 0.05
+    gamma = 0.99
+    epsilon = 1.0
+    epsilon_final = 0.01
+    epsilon_decay = (epsilon - epsilon_final) / episodes
+    agent = Q[tuple[int, int], int](
+        game,
+        epsilon,
+        epsilon_decay,
+        gamma,
+        alpha,
+    )
+    # Training loop
+    for ep in range(episodes):
+        state = game.reset()
+        loss = 0
+        turns = 0
+        while not game.done():
+            action = agent.action(state)
+            next_state, reward = game.step(action)
+            loss += agent.update(game.done(), state, action, reward, next_state)
+            state = next_state
+            turns += 1
+
+        agent.decay_epsilon()
+
+        print(f"\nEpisode {ep + 1}: loss {loss}, turns {turns}")
+    return agent.training_loss
+
+
 def qnet() -> list[float] | None:
     # game = MoveRight(4)
     game = GridWorld()
@@ -108,7 +142,7 @@ def sarsa() -> list[float]:
 
 
 def main():
-    if loss := qnet():
+    if loss := qlearn_grid():
         plot(loss)
 
 

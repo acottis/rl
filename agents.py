@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Generic
 import numpy as np
 import torch.nn as nn
@@ -82,7 +83,7 @@ class Q(Generic[State, Action]):
     # List of valid actions
     game: Game[State, Action]
     # The Q table - For a given state what action should we do
-    q: np.typing.NDArray[np.float64]
+    q: dict[tuple[State, Action], float]
     # For metrics
     training_loss: list[float] = []
 
@@ -102,15 +103,17 @@ class Q(Generic[State, Action]):
         self.epsilon = epsilon
         self.gamma = gamma
         self.alpha = alpha
-        self.q = np.zeros((5, len(self.game.actions())))
+        self.q = defaultdict(float)
 
     def action(self, state: State) -> Action:
         """Choose action based on current Q Table and epsilon."""
+        actions = self.game.actions()
         if np.random.rand() < self.epsilon:
-            return np.random.choice(np.array(self.game.actions()))
+            return np.random.choice(np.array(actions))
         else:
             # The index of the highest value
-            return np.argmax(self.q[state])
+            q_values = [self.q[(state, a)] for a in actions]
+            return actions[int(np.argmax(q_values))]
 
     def update(
         self,
@@ -119,17 +122,18 @@ class Q(Generic[State, Action]):
         action: Action,
         reward: float,
         next_state: State,
-    ) -> None:
+    ) -> float:
         if done:
             target = reward
         else:
-            target = reward + self.gamma * np.max(self.q[next_state])
+            target = reward + self.gamma * np.max(self.q[(next_state, action)])
 
-        loss = target - self.q[state, action]
+        loss = target - self.q[(state, action)]
         self.training_loss.append(loss)
 
         # Update the last execution actions score based on our hyperparams
-        self.q[state, action] += self.alpha * loss
+        self.q[(state, action)] += self.alpha * loss
+        return loss
 
     def decay_epsilon(self):
         self.epsilon -= self.epsilon_decay
