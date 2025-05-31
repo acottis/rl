@@ -162,7 +162,7 @@ class QNet(Generic[State, Action]):
         self.alpha = alpha
 
         # Neural Network
-        self.q = nn.Linear(5, 2)
+        self.q = nn.Linear(self.game.states(), len(self.game.actions()))
         self.optimizer = torch.optim.SGD(self.q.parameters(), lr=self.alpha)
         self.loss_fn = nn.MSELoss()
 
@@ -176,7 +176,12 @@ class QNet(Generic[State, Action]):
                 return torch.argmax(table).item()
 
     def one_hot(self, state: State) -> torch.Tensor:
-        return F.one_hot(torch.tensor(state), num_classes=5).float().unsqueeze(0)
+        index = self.game.one_hot(state)
+        return (
+            F.one_hot(torch.tensor(index), num_classes=self.game.states())
+            .float()
+            .unsqueeze(0)
+        )
 
     def update(
         self,
